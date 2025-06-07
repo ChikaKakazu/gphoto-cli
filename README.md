@@ -26,6 +26,7 @@ go build -o gphoto-cli
 2. OAuth 2.0 クライアント ID とシークレットの入力
 3. 認証方式の選択（自動/手動）
 4. 設定ファイル（`~/.gphoto-cli/config.yaml`）への保存
+5. 認証トークン（`~/.gphoto-cli/token.json`）の保存
 
 ### 3. 設定管理
 ```bash
@@ -69,7 +70,7 @@ go build -o gphoto-cli
 # サムネイルサイズでダウンロード
 ./gphoto-cli download --thumbnail
 
-# デフォルト（./downloads）にダウンロード
+# デフォルト（~/gphoto-downloads）にダウンロード
 ./gphoto-cli download
 ```
 

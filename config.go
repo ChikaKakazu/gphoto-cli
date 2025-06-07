@@ -225,8 +225,13 @@ func runConfigReset() error {
 	}
 	
 	// トークンファイルも削除
-	if err := os.Remove(tokenFile); err != nil && !os.IsNotExist(err) {
-		fmt.Printf("Warning: failed to remove token file: %v\n", err)
+	tokenPath, err := getTokenPath()
+	if err != nil {
+		fmt.Printf("Warning: failed to get token path: %v\n", err)
+	} else {
+		if err := os.Remove(tokenPath); err != nil && !os.IsNotExist(err) {
+			fmt.Printf("Warning: failed to remove token file: %v\n", err)
+		}
 	}
 	
 	fmt.Println("✅ 設定がリセットされました")

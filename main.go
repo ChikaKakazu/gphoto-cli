@@ -279,7 +279,11 @@ func runDownloadOnly(outputDir string, thumbnail bool) error {
 
 	// 出力ディレクトリの設定
 	if outputDir == "" {
-		outputDir = "./downloads"
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("failed to get home directory: %v", err)
+		}
+		outputDir = filepath.Join(homeDir, "gphoto-downloads")
 	}
 	
 	// 出力ディレクトリを作成
@@ -345,6 +349,14 @@ func getImageHighResURL(baseUrl string) string {
 }
 
 func downloadImageToFile(client *http.Client, accessToken, imageUrl, outputPath string) error {
+	// ディレクトリの存在と権限を確認
+	dir := filepath.Dir(outputPath)
+	if stat, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("directory not accessible: %v", err)
+	} else if !stat.IsDir() {
+		return fmt.Errorf("path is not a directory: %s", dir)
+	}
+
 	// 画像をダウンロード
 	req, err := http.NewRequest("GET", imageUrl, nil)
 	if err != nil {
@@ -367,6 +379,10 @@ func downloadImageToFile(client *http.Client, accessToken, imageUrl, outputPath 
 	// ファイルに保存
 	file, err := os.Create(outputPath)
 	if err != nil {
+		// より詳細なエラー情報を提供
+		if os.IsPermission(err) {
+			return fmt.Errorf("permission denied: cannot create file %s (check directory permissions)", outputPath)
+		}
 		return fmt.Errorf("failed to create file: %v", err)
 	}
 	defer file.Close()
@@ -385,7 +401,7 @@ func init() {
 	pickerCmd.Flags().BoolP("download", "d", false, "Download images to temp directory")
 	pickerCmd.Flags().Bool("thumbnail", false, "Use thumbnail size for faster download")
 
-	downloadCmd.Flags().StringP("output", "o", "./downloads", "Output directory for downloaded images")
+	downloadCmd.Flags().StringP("output", "o", "", "Output directory for downloaded images (default: ~/gphoto-downloads)")
 	downloadCmd.Flags().Bool("thumbnail", false, "Download thumbnail size instead of full resolution")
 
 	// config サブコマンドの設定

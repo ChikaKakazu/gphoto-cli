@@ -7,15 +7,29 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 )
 
-const (
-	tokenFile = "token.json"
-)
+// トークンファイルのパスを取得
+func getTokenPath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get home directory: %v", err)
+	}
+	
+	configDir := filepath.Join(homeDir, ".gphoto-cli")
+	
+	// ディレクトリが存在しない場合は作成
+	if err := os.MkdirAll(configDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create config directory: %v", err)
+	}
+	
+	return filepath.Join(configDir, "token.json"), nil
+}
 
 func getGoogleConfig() (*oauth2.Config, error) {
 	// 設定ファイルから読み込み（優先）
@@ -214,19 +228,29 @@ func saveToken(path string, token *oauth2.Token) {
 }
 
 func getClient(config *oauth2.Config) *http.Client {
-	tok, err := tokenFromFile(tokenFile)
+	tokenPath, err := getTokenPath()
+	if err != nil {
+		log.Fatalf("Failed to get token path: %v", err)
+	}
+	
+	tok, err := tokenFromFile(tokenPath)
 	if err != nil {
 		tok = getTokenFromWeb(config)
-		saveToken(tokenFile, tok)
+		saveToken(tokenPath, tok)
 	}
 	return config.Client(context.Background(), tok)
 }
 
 func getAccessToken(config *oauth2.Config) (string, error) {
-	tok, err := tokenFromFile(tokenFile)
+	tokenPath, err := getTokenPath()
+	if err != nil {
+		return "", fmt.Errorf("failed to get token path: %v", err)
+	}
+	
+	tok, err := tokenFromFile(tokenPath)
 	if err != nil {
 		tok = getTokenFromWeb(config)
-		saveToken(tokenFile, tok)
+		saveToken(tokenPath, tok)
 	}
 	return tok.AccessToken, nil
 }
