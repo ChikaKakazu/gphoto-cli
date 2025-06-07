@@ -99,8 +99,6 @@ func (pc *PickerClient) CreateSession(ctx context.Context) (*PickerSession, erro
 		return nil, fmt.Errorf("failed to read response body: %v", err)
 	}
 	
-	fmt.Printf("DEBUG: Session creation response: %s\n", string(body))
-	
 	var session PickerSession
 	if err := json.Unmarshal(body, &session); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
@@ -110,8 +108,6 @@ func (pc *PickerClient) CreateSession(ctx context.Context) (*PickerSession, erro
 	if session.Name == "" && session.ID != "" {
 		session.Name = fmt.Sprintf("sessions/%s", session.ID)
 	}
-	
-	fmt.Printf("DEBUG: Session name: %s\n", session.Name)
 	
 	return &session, nil
 }
@@ -173,16 +169,8 @@ func (pc *PickerClient) ListMediaItems(ctx context.Context, sessionName string) 
 		return nil, fmt.Errorf("API error %d: %s", resp.StatusCode, string(body))
 	}
 	
-	// レスポンス全体を読み取ってデバッグ
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read response body: %v", err)
-	}
-	
-	fmt.Printf("DEBUG: MediaItems response: %s\n", string(body))
-	
 	var response MediaItemsResponse
-	if err := json.Unmarshal(body, &response); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %v", err)
 	}
 	

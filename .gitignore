@@ -48,3 +48,6 @@ gphoto-cli
 credentials.json
 token.json
 client_secret*.json
+
+# Downloads
+downloads/

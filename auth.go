@@ -9,45 +9,86 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/google"
 )
 
 const (
-	credentialsFile = "credentials.json"
-	tokenFile       = "token.json"
+	tokenFile = "token.json"
 )
 
 func getGoogleConfig() (*oauth2.Config, error) {
-	b, err := os.ReadFile(credentialsFile)
+	// 設定ファイルから読み込み（優先）
+	config, err := loadConfig()
 	if err != nil {
-		return nil, fmt.Errorf("unable to read client secret file: %v", err)
+		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
-	config, err := google.ConfigFromJSON(b, "https://www.googleapis.com/auth/photospicker.mediaitems.readonly")
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse client secret file to config: %v", err)
+	// 設定が完了していない場合はエラー
+	if config.GoogleClientID == "" || config.GoogleClientSecret == "" {
+		return nil, fmt.Errorf("Google OAuth credentials not configured. Please run: ./gphoto-cli setup")
 	}
-	
-	return config, nil
+
+	// 環境変数からの上書き（オプション）
+	if err := godotenv.Load(); err == nil {
+		if envClientID := os.Getenv("GOOGLE_CLIENT_ID"); envClientID != "" {
+			config.GoogleClientID = envClientID
+		}
+		if envClientSecret := os.Getenv("GOOGLE_CLIENT_SECRET"); envClientSecret != "" {
+			config.GoogleClientSecret = envClientSecret
+		}
+		if envRedirectURI := os.Getenv("GOOGLE_REDIRECT_URI"); envRedirectURI != "" {
+			config.GoogleRedirectURI = envRedirectURI
+		}
+		if envScope := os.Getenv("GOOGLE_SCOPE"); envScope != "" {
+			config.GoogleScope = envScope
+		}
+		if envAuthMethod := os.Getenv("AUTH_METHOD"); envAuthMethod != "" {
+			config.AuthMethod = envAuthMethod
+		}
+	}
+
+	// OAuth2設定を構築
+	oauthConfig := &oauth2.Config{
+		ClientID:     config.GoogleClientID,
+		ClientSecret: config.GoogleClientSecret,
+		RedirectURL:  config.GoogleRedirectURI,
+		Scopes:       []string{config.GoogleScope},
+		Endpoint: oauth2.Endpoint{
+			AuthURL:  "https://accounts.google.com/o/oauth2/auth",
+			TokenURL: "https://oauth2.googleapis.com/token",
+		},
+	}
+
+	return oauthConfig, nil
 }
 
 func getTokenFromWeb(config *oauth2.Config) *oauth2.Token {
-	// デスクトップアプリケーション用の認証フロー
-	// まずローカルサーバー方式を試行し、失敗した場合は手動入力方式にフォールバック
-	
-	fmt.Println("認証方法を選択してください:")
-	fmt.Println("1. 自動認証 (推奨): ローカルサーバーを使用")
-	fmt.Println("2. 手動認証: 認証コードを手動で入力")
-	fmt.Print("選択 (1 または 2): ")
-	
-	var choice string
-	fmt.Scan(&choice)
-	
-	if choice == "1" {
+	// 設定ファイルから認証方式を取得
+	appConfig, err := loadConfig()
+	if err != nil {
+		fmt.Printf("Warning: failed to load config: %v\n", err)
+		fmt.Println("自動認証方式を使用します")
 		return getTokenWithLocalServer(config)
-	} else {
+	}
+
+	// 環境変数での上書きもチェック
+	authMethod := appConfig.AuthMethod
+	if envAuthMethod := os.Getenv("AUTH_METHOD"); envAuthMethod != "" {
+		authMethod = envAuthMethod
+	}
+
+	switch authMethod {
+	case "server":
+		fmt.Println("自動認証方式を使用します (ローカルサーバー)")
+		return getTokenWithLocalServer(config)
+	case "oob":
+		fmt.Println("手動認証方式を使用します (認証コード入力)")
 		return getTokenManually(config)
+	default:
+		fmt.Printf("不明な認証方式: %s\n", authMethod)
+		fmt.Println("自動認証方式を使用します")
+		return getTokenWithLocalServer(config)
 	}
 }
 
@@ -55,10 +96,16 @@ func getTokenWithLocalServer(config *oauth2.Config) *oauth2.Token {
 	codeCh := make(chan string)
 	state := "state-token"
 	
-	// ローカルサーバーを起動
-	server := &http.Server{Addr: ":8080"}
+	// 設定からポート番号を決定
+	port := ":8080" // デフォルト
+	if config.RedirectURL != "" && config.RedirectURL != "urn:ietf:wg:oauth:2.0:oob" {
+		// 既にconfigに設定されているRedirectURLを使用
+	}
 	
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// ローカルサーバーを起動
+	server := &http.Server{Addr: port}
+	
+	http.HandleFunc("/auth/callback", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Query().Get("state") != state {
 			http.Error(w, "State mismatch", http.StatusBadRequest)
 			return
@@ -87,7 +134,6 @@ func getTokenWithLocalServer(config *oauth2.Config) *oauth2.Token {
 	}()
 	
 	// 認証URLを生成
-	config.RedirectURL = "http://localhost:8080"
 	authURL := config.AuthCodeURL(state, oauth2.AccessTypeOffline)
 	
 	fmt.Printf("ブラウザで以下のURLを開いて認証を行ってください:\n%v\n\n", authURL)
