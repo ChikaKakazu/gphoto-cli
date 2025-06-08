@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(go build:*)",
-      "Bash(./gphoto-cli setup --help)"
+      "Bash(./gphoto-cli setup --help)",
+      "WebFetch(domain:developers.google.com)"
     ],
     "deny": []
   }

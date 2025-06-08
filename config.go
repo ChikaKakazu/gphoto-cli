@@ -33,14 +33,14 @@ func getConfigPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %v", err)
 	}
-	
+
 	configDir := filepath.Join(homeDir, ".gphoto-cli")
-	
+
 	// ディレクトリが存在しない場合は作成
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		return "", fmt.Errorf("failed to create config directory: %v", err)
 	}
-	
+
 	return filepath.Join(configDir, "config.yaml"), nil
 }
 
@@ -50,22 +50,22 @@ func loadConfig() (*Config, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// ファイルが存在しない場合はデフォルト設定を返す
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		return getDefaultConfig(), nil
 	}
-	
+
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read config file: %v", err)
 	}
-	
+
 	config := &Config{}
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file: %v", err)
 	}
-	
+
 	// デフォルト値を設定
 	if config.GoogleRedirectURI == "" {
 		config.GoogleRedirectURI = "http://localhost:8080/auth/callback"
@@ -76,7 +76,7 @@ func loadConfig() (*Config, error) {
 	if config.AuthMethod == "" {
 		config.AuthMethod = "server"
 	}
-	
+
 	return config, nil
 }
 
@@ -86,27 +86,27 @@ func saveConfig(config *Config) error {
 	if err != nil {
 		return err
 	}
-	
+
 	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %v", err)
 	}
-	
+
 	if err := os.WriteFile(configPath, data, 0600); err != nil {
 		return fmt.Errorf("failed to write config file: %v", err)
 	}
-	
+
 	return nil
 }
 
 // 対話式セットアップ
 func runInteractiveSetup() error {
 	reader := bufio.NewReader(os.Stdin)
-	
+
 	fmt.Println("🔧 gphoto-cli セットアップ")
 	fmt.Println("=====================================")
 	fmt.Println()
-	
+
 	// Google Cloud Console のセットアップ手順を案内
 	fmt.Println("📋 Google Cloud Console でのセットアップが必要です:")
 	fmt.Println()
@@ -120,13 +120,13 @@ func runInteractiveSetup() error {
 	fmt.Println("💡 注意: Google Photos Picker APIは特別な有効化は不要で、")
 	fmt.Println("   OAuth認証のみで利用できます。")
 	fmt.Println()
-	
+
 	fmt.Print("準備ができたら Enter キーを押してください...")
 	reader.ReadLine()
 	fmt.Println()
-	
+
 	config := getDefaultConfig()
-	
+
 	// クライアントIDの入力
 	fmt.Print("Google Client ID を入力してください: ")
 	clientID, err := reader.ReadString('\n')
@@ -134,11 +134,11 @@ func runInteractiveSetup() error {
 		return fmt.Errorf("failed to read client ID: %v", err)
 	}
 	config.GoogleClientID = strings.TrimSpace(clientID)
-	
+
 	if config.GoogleClientID == "" {
 		return fmt.Errorf("Client ID は必須です")
 	}
-	
+
 	// クライアントシークレットの入力
 	fmt.Print("Google Client Secret を入力してください: ")
 	clientSecret, err := reader.ReadString('\n')
@@ -146,24 +146,24 @@ func runInteractiveSetup() error {
 		return fmt.Errorf("failed to read client secret: %v", err)
 	}
 	config.GoogleClientSecret = strings.TrimSpace(clientSecret)
-	
+
 	if config.GoogleClientSecret == "" {
 		return fmt.Errorf("Client Secret は必須です")
 	}
-	
+
 	// 認証方式の選択
 	fmt.Println()
 	fmt.Println("認証方式を選択してください:")
 	fmt.Println("1. 自動認証 (推奨): ローカルサーバーを使用")
 	fmt.Println("2. 手動認証: 認証コードを手動で入力")
-	fmt.Print("選択 (1 または 2) [1]: ")
-	
+	fmt.Print("選択 (1 または 2) default[1]: ")
+
 	authChoice, err := reader.ReadString('\n')
 	if err != nil {
 		return fmt.Errorf("failed to read auth method: %v", err)
 	}
 	authChoice = strings.TrimSpace(authChoice)
-	
+
 	if authChoice == "" || authChoice == "1" {
 		config.AuthMethod = "server"
 	} else if authChoice == "2" {
@@ -173,14 +173,14 @@ func runInteractiveSetup() error {
 		fmt.Println("無効な選択です。自動認証を使用します。")
 		config.AuthMethod = "server"
 	}
-	
+
 	// 設定を保存
 	if err := saveConfig(config); err != nil {
 		return fmt.Errorf("failed to save config: %v", err)
 	}
-	
+
 	configPath, _ := getConfigPath()
-	
+
 	fmt.Println()
 	fmt.Println("✅ セットアップが完了しました!")
 	fmt.Printf("設定ファイル: %s\n", configPath)
@@ -188,7 +188,7 @@ func runInteractiveSetup() error {
 	fmt.Println("🚀 次のコマンドで Google Photos にアクセスできます:")
 	fmt.Println("   ./gphoto-cli picker")
 	fmt.Println()
-	
+
 	return nil
 }
 
@@ -198,9 +198,9 @@ func runConfigShow() error {
 	if err != nil {
 		return err
 	}
-	
+
 	configPath, _ := getConfigPath()
-	
+
 	fmt.Printf("📍 設定ファイル: %s\n", configPath)
 	fmt.Println()
 	fmt.Printf("Google Client ID: %s\n", maskString(config.GoogleClientID))
@@ -208,7 +208,7 @@ func runConfigShow() error {
 	fmt.Printf("Redirect URI: %s\n", config.GoogleRedirectURI)
 	fmt.Printf("認証方式: %s\n", config.AuthMethod)
 	fmt.Printf("OAuth Scope: %s\n", config.GoogleScope)
-	
+
 	return nil
 }
 
@@ -218,12 +218,12 @@ func runConfigReset() error {
 	if err != nil {
 		return err
 	}
-	
+
 	// 設定ファイルを削除
 	if err := os.Remove(configPath); err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to remove config file: %v", err)
 	}
-	
+
 	// トークンファイルも削除
 	tokenPath, err := getTokenPath()
 	if err != nil {
@@ -233,10 +233,10 @@ func runConfigReset() error {
 			fmt.Printf("Warning: failed to remove token file: %v\n", err)
 		}
 	}
-	
+
 	fmt.Println("✅ 設定がリセットされました")
 	fmt.Println("再度セットアップを行うには: ./gphoto-cli setup")
-	
+
 	return nil
 }
 
@@ -254,6 +254,6 @@ func isConfigured() bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return config.GoogleClientID != "" && config.GoogleClientSecret != ""
 }

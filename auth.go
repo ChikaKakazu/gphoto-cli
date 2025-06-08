@@ -238,6 +238,27 @@ func getClient(config *oauth2.Config) *http.Client {
 		tok = getTokenFromWeb(config)
 		saveToken(tokenPath, tok)
 	}
+	
+	// トークンの有効期限をチェック
+	if !tok.Valid() {
+		fmt.Println("アクセストークンの有効期限が切れています。リフレッシュしています...")
+		
+		// OAuth2のTokenSourceを使用してトークンを自動リフレッシュ
+		tokenSource := config.TokenSource(context.Background(), tok)
+		newTok, err := tokenSource.Token()
+		if err != nil {
+			fmt.Println("トークンのリフレッシュに失敗しました。再認証が必要です。")
+			// リフレッシュに失敗した場合は再認証
+			tok = getTokenFromWeb(config)
+		} else {
+			tok = newTok
+			fmt.Println("アクセストークンが正常にリフレッシュされました。")
+		}
+		
+		// 新しいトークンを保存
+		saveToken(tokenPath, tok)
+	}
+	
 	return config.Client(context.Background(), tok)
 }
 
@@ -252,5 +273,26 @@ func getAccessToken(config *oauth2.Config) (string, error) {
 		tok = getTokenFromWeb(config)
 		saveToken(tokenPath, tok)
 	}
+	
+	// トークンの有効期限をチェック
+	if !tok.Valid() {
+		fmt.Println("アクセストークンの有効期限が切れています。リフレッシュしています...")
+		
+		// OAuth2のTokenSourceを使用してトークンを自動リフレッシュ
+		tokenSource := config.TokenSource(context.Background(), tok)
+		newTok, err := tokenSource.Token()
+		if err != nil {
+			fmt.Println("トークンのリフレッシュに失敗しました。再認証が必要です。")
+			// リフレッシュに失敗した場合は再認証
+			tok = getTokenFromWeb(config)
+		} else {
+			tok = newTok
+			fmt.Println("アクセストークンが正常にリフレッシュされました。")
+		}
+		
+		// 新しいトークンを保存
+		saveToken(tokenPath, tok)
+	}
+	
 	return tok.AccessToken, nil
 }
