@@ -1,10 +1,8 @@
 # gphoto-cli
-Google Photos Picker APIを利用した画像表示対応CLI
+Google Photos Picker APIを利用したCLI
 
 ## 機能
 - 🖼️ Google Photos Picker APIで全ライブラリからの写真選択
-- 📱 ターミナル内ASCII プレビュー
-- 🖥️ 外部ビューアーでの画像表示
 - 💾 画像ダウンロード機能
 - 🔍 詳細なEXIF情報表示
 - ⚙️ 対話式セットアップ
@@ -39,30 +37,13 @@ go build -o gphoto-cli
 
 ## 使用方法
 
-### 基本的な写真選択
+### 基本的な写真選択とメタデータ表示
 ```bash
+# Google Photos Pickerで写真を選択し、詳細情報を表示
 ./gphoto-cli picker
 ```
 
-### 画像表示オプション
-```bash
-# ターミナル内プレビュー表示
-./gphoto-cli picker --preview
-
-# 外部ビューアーで開く
-./gphoto-cli picker --open
-
-# 画像をダウンロード（一時ディレクトリ）
-./gphoto-cli picker --download
-
-# サムネイルサイズでダウンロード
-./gphoto-cli picker --thumbnail
-
-# クイックビューモード（プレビュー + 外部表示）
-./gphoto-cli view
-```
-
-### 専用ダウンロードコマンド
+### 画像ダウンロード
 ```bash
 # 指定ディレクトリにダウンロード
 ./gphoto-cli download --output ./my-photos
@@ -74,6 +55,12 @@ go build -o gphoto-cli
 ./gphoto-cli download
 ```
 
+### クイックビューモード
+```bash
+# 写真選択とメタデータ表示
+./gphoto-cli view
+```
+
 ### その他のコマンド
 ```bash
 # バージョン表示
@@ -82,3 +69,21 @@ go build -o gphoto-cli
 # ヘルプ表示
 ./gphoto-cli --help
 ```
+
+## コマンド詳細
+
+### picker
+Google Photos Picker APIを使用してライブラリ全体から写真を選択し、以下の情報を表示します：
+- ファイル名、ID、タイプ
+- 作成日時、サイズ
+- カメラ情報（メーカー、モデル）
+- 撮影設定（絞り、焦点距離、ISO、シャッタースピード）
+- BaseURL
+
+### download
+Google Photos Picker APIで選択した写真をローカルディレクトリにダウンロードします：
+- `--output` (`-o`): 出力ディレクトリを指定（デフォルト: ~/gphoto-downloads）
+- `--thumbnail`: サムネイルサイズでダウンロード（高速）
+
+### view
+pickerコマンドと同じ機能を提供するクイックビューモードです。

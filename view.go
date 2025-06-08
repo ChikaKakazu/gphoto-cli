@@ -25,8 +25,8 @@ func runQuickView() error {
 		return fmt.Errorf("not configured")
 	}
 
-	fmt.Println("🖼️  Quick View Mode - Select photos to view immediately")
-	return runPickerWithDisplay(true, true, false, true) // preview=true, open=true, download=false, thumbnail=true
+	fmt.Println("🖼️  Quick View Mode - Select photos and view metadata")
+	return runPicker() // 画像表示機能を削除し、基本的なpicker機能のみ使用
 }
 
 func init() {

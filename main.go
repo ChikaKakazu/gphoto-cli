@@ -101,19 +101,14 @@ var pickerCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		preview, _ := cmd.Flags().GetBool("preview")
-		open, _ := cmd.Flags().GetBool("open")
-		download, _ := cmd.Flags().GetBool("download")
-		thumbnail, _ := cmd.Flags().GetBool("thumbnail")
-		
-		if err := runPickerWithDisplay(preview, open, download, thumbnail); err != nil {
+		if err := runPicker(); err != nil {
 			log.Fatalf("Error running picker: %v", err)
 		}
 	},
 }
 
 
-func runPickerWithDisplay(preview, open, download, thumbnail bool) error {
+func runPicker() error {
 	config, err := getGoogleConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get Google config: %v", err)
@@ -157,18 +152,6 @@ func runPickerWithDisplay(preview, open, download, thumbnail bool) error {
 		return nil
 	}
 
-	// 画像ビューアーを初期化
-	var imageViewer *ImageViewer
-	if preview || open || download {
-		imageViewer, err = NewImageViewer(client, accessToken)
-		if err != nil {
-			fmt.Printf("Warning: Failed to initialize image viewer: %v\n", err)
-		} else {
-			// 古い一時ファイルをクリーンアップ
-			imageViewer.CleanupTempFiles()
-		}
-	}
-
 	fmt.Printf("選択された写真 (%d件):\n\n", len(mediaItems))
 	for i, item := range mediaItems {
 		fmt.Printf("%d. %s\n", i+1, item.MediaFile.Filename)
@@ -185,45 +168,6 @@ func runPickerWithDisplay(preview, open, download, thumbnail bool) error {
 				int(item.MediaFile.MediaFileMetadata.PhotoMetadata.FocalLength),
 				item.MediaFile.MediaFileMetadata.PhotoMetadata.IsoEquivalent,
 				item.MediaFile.MediaFileMetadata.PhotoMetadata.ExposureTime)
-		}
-
-		// 画像表示機能
-		if imageViewer != nil {
-			// URLを適切に調整
-			imageUrl := item.MediaFile.BaseUrl
-			if thumbnail {
-				imageUrl = imageViewer.GetThumbnailURL(imageUrl, 800, 600)
-			} else if download || open {
-				imageUrl = imageViewer.GetHighResURL(imageUrl)
-			}
-
-			// 画像をダウンロード
-			if preview || open || download {
-				fmt.Printf("   画像を処理中...\n")
-				imagePath, err := imageViewer.DownloadImage(imageUrl, item.MediaFile.Filename)
-				if err != nil {
-					fmt.Printf("   Warning: Failed to download image: %v\n", err)
-				} else {
-					// プレビュー表示
-					if preview {
-						fmt.Println("   --- ASCII Preview ---")
-						imageViewer.DisplayASCII(imagePath, 60)
-					}
-
-					// 外部ビューアーで開く
-					if open {
-						fmt.Printf("   外部ビューアーで画像を開いています...\n")
-						if err := imageViewer.OpenWithDefaultViewer(imagePath); err != nil {
-							fmt.Printf("   Warning: Failed to open image: %v\n", err)
-						}
-					}
-
-					// ダウンロード情報を表示
-					if download {
-						fmt.Printf("   ダウンロード完了: %s\n", imagePath)
-					}
-				}
-			}
 		}
 
 		fmt.Printf("   URL: %s\n", item.MediaFile.BaseUrl)
@@ -396,11 +340,6 @@ func downloadImageToFile(client *http.Client, accessToken, imageUrl, outputPath 
 }
 
 func init() {
-	pickerCmd.Flags().BoolP("preview", "p", false, "Show ASCII preview in terminal")
-	pickerCmd.Flags().BoolP("open", "o", false, "Open images with default viewer")
-	pickerCmd.Flags().BoolP("download", "d", false, "Download images to temp directory")
-	pickerCmd.Flags().Bool("thumbnail", false, "Use thumbnail size for faster download")
-
 	downloadCmd.Flags().StringP("output", "o", "", "Output directory for downloaded images (default: ~/gphoto-downloads)")
 	downloadCmd.Flags().Bool("thumbnail", false, "Download thumbnail size instead of full resolution")
 
